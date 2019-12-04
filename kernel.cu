@@ -38,6 +38,9 @@
 #include "mctBaseTest.cuh"
 #include <typeinfo>
 
+#include "util.cuh"
+
+
 //云接驳问题
 //对于云接驳问题，是一个所有需求都在场站，所有D在各个公司位置的,VRP问题
 //对于云接驳问题需要定义的目标函数
@@ -351,18 +354,23 @@ int main()
 	int timeLength = 30;               //决策时刻数目
 
 	//棋盘生成
-	Eigen::MatrixXd boardTable=Eigen::MatrixXd::Zero(segLength, timeLength);
+	Eigen::MatrixXf boardTable=Eigen::MatrixXf::Zero(segLength, timeLength);
 	for (int i = 0; i < routePool.size(); i++) {	
 		vector<int> stationWaitFlow = routePool[i].stationWaitFlow;
 		for (int j = 0; j < stationWaitFlow.size(); j++) {
-			boardTable(i, j) = stationWaitFlow[j];
+			boardTable(i, j) = float(stationWaitFlow[j]);
 		}
 	}
 
 	//站点客流生成
 	std::vector<int> stationWaitFlow;
-	for (int i = 0; i < companys.size(); i++) {
-		stationWaitFlow.push_back(companys[i].employeeWantUseBusNum);
+	for (int i = 0; i < companyWithTimeWindows.size(); i++) {
+		if (companyWithTimeWindows[i].companyType == 2) {
+			stationWaitFlow.push_back(companyWithTimeWindows[i].employeeNum/10);
+		}
+		else {
+			stationWaitFlow.push_back(companyWithTimeWindows[i].employeeWantUseBusNum);
+		}
 	}
 
 	for (int i = 0; i < routePool.size(); i++) {
@@ -391,12 +399,47 @@ int main()
 	companytypeRouteDict.insert(std::pair<int, std::vector<int>>(2, largecompanyRouteID));
 	companytypeRouteDict.insert(std::pair<int, std::vector<int>>(1, smallcompanyRouteID));
 	MCT::Board  newBoard(boardTable, stationWaitFlow);
-	MCT::Agent  agent;
+	MCT::Agent  agent(companys);
 	MCT::BusPot pot;
 
 	//贪婪搜索
-	agent.BaseGreedySearch(newBoard, pot, companytypeRouteDict, routePool, true);
-    
+
+
+
+
+	/*
+	for (int i = 0; i < routePool.size(); i++) {
+		std::map<int, float> percent = routePool[i].companyPercent;
+		std::map<int, float>::iterator iter = percent.begin();
+		for (iter = percent.begin(); iter != percent.end(); iter++) {
+			std::cout << iter->first << "  " << iter->second;
+		}
+		std::cout << std::endl;
+	}*/
+
+
+	for (int i = 0; i < routePool.size(); i++) {
+
+		std::vector<int> nodeIDs = routePool[i].nodeIDs;
+
+		std::cout << i << "  ";
+		for (int j = 0; j < nodeIDs.size(); j++) {
+			std::cout << nodeIDs[j] << "   " << companys[nodeIDs[j]].name << "   "<< stationWaitFlow[nodeIDs[j]]<<"   ";
+		}
+		std::cout << std::endl;
+	}
+
+	//agent.BaseGreedySearch(newBoard, pot, companytypeRouteDict, routePool, false);
+	//agent.getGamePlayValue(newBoard, pot,true);
+	
+	MCT::mct mct(10000,companytypeRouteDict,routePool,newBoard);
+	mct.getinitialValue(false);
+	mct.gameSet();
+
+	/*
+	MCT::Reward reward(80, 20);
+	float value = reward(80);
+	std::cout << value << std::endl;*/
 
 	system("pause");
     return 0;

@@ -90,5 +90,8 @@
     <ClInclude Include="mctBaseTest.cuh">
       <Filter>Base</Filter>
     </ClInclude>
+    <ClInclude Include="util.cuh">
+      <Filter>Base</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

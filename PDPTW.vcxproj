@@ -177,6 +177,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="routeGenerate.cuh" />
     <ClInclude Include="spyderMetroData.cuh" />
     <ClInclude Include="User.cuh" />
+    <ClInclude Include="util.cuh" />
     <ClInclude Include="visual.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
