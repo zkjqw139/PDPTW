@@ -30,7 +30,7 @@ namespace PDPTW {
 					PDPTW::busNode bnode;
 					bnode.arrivetime  = time;
 					bnode.TravelDistance = dist;
-					bnode.busDemand   = 60;
+					bnode.busDemand   = 80;
 					bnode.currentDemand = 0;
 
 					int temp_time = time;
@@ -73,7 +73,7 @@ namespace PDPTW {
 				PDPTW::busNode bnode;
 				bnode.arrivetime = time;
 				bnode.TravelDistance = dist;
-				bnode.busDemand = 60;
+				bnode.busDemand = 80;
 				bnode.currentDemand = 0;
 
 				int temp_time = time;

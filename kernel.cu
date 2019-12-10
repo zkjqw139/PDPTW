@@ -219,10 +219,10 @@ int main()
 	
 
 	std::string metro_station_name = "'西兴站'";
-	std::string hour_begin = "8";
-	std::string hour_end = "9";
-	std::string day_begin = "20190301";
-	std::string day_end = "20190401";
+	std::string hour_begin         = "8";
+	std::string hour_end           = "9";
+	std::string day_begin          = "20190301";
+	std::string day_end            = "20190401";
 	
 	
 	
@@ -231,10 +231,10 @@ int main()
 
 	//对于不同公司类型生成不同的矩阵用于计算公司类型
 	std::string origins = "120.220429,30.187295";
-	std::string dest = "120.189549,30.190514";
-	std::string name = "西兴";
+	std::string dest    = "120.189549,30.190514";
+	std::string name    = "西兴";
 	PDPTW::CompanyWithTimeTable depot(name, 120.220429, 30.187295, 0, 0, -1);
-
+	
 	std::vector<PDPTW::CompanyWithTimeTable> smallCompanys;
 	std::vector<PDPTW::CompanyWithTimeTable> largeCompanys;
 	smallCompanys.push_back(depot);
@@ -348,6 +348,88 @@ int main()
 		}
 	}
 
+	//DFS算法部分
+	/*---------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	//step1 寻找需要进行DFS的公司
+	//小公司人数比较少先不进行考虑
+	//中型公司和大型公司是主要的考虑对象
+
+	int totalBusUseForDfs  = 0;
+	int serveiceCompanyNum = 0;
+	int totalServicePeople = 0;
+	int allServicePeople   = 0;
+
+	for (int i = 0; i < companyWithTimeWindows.size(); i++) {
+
+	 
+		int rtype        = companyWithTimeWindows[i].companyType;
+		std::string name = companyWithTimeWindows[i].name;
+
+		std::cout << "name is: " << name << std::endl;
+
+		allServicePeople += companyWithTimeWindows[i].employeeWantUseBusNum;
+		//筛选到的大公司和中型公司
+		if (rtype == 0) { 
+			continue;
+		}
+
+		int Res[19] = { 1,    0,   0,  0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,    0};		
+		int maxCount = 0;
+		if (rtype == 1) {
+			 maxCount = (companyWithTimeWindows[i].employeeNum /15) /80 +1;
+		}
+
+		if (rtype == 2) {
+			 maxCount = (companyWithTimeWindows[i].employeeNum/10 ) / 80+1;
+		}
+		
+		
+		if (maxCount > 8) {
+			maxCount = 8;
+		}
+
+		int count = 0;
+		int ID = 0;
+		int bestcost = 99999;
+		int * bestRes = new int[19];
+
+		bestRes[0] = 1;
+		for (int k = 1; k < 19; k++) {
+			bestRes[k] = 0;  
+		}
+		 
+		std::string    origins = "120.203149,30.183442";
+		std::string    dest    = std::to_string(companyWithTimeWindows[i].lon) + "," + std::to_string(companyWithTimeWindows[i].lat);
+		PDPTW::disInfo dinfo   = PDPTW::getAllDistanceAndDuration(origins, dest);
+		std::deque<PDPTW::stationNode> pipeflow = companyWithTimeWindows[i].pipeflow;
+		bestRes = DFS(Res, ID, count, maxCount, 19, dinfo, pipeflow, bestcost, bestRes);
+
+		for (int k = 0; k < 19; k++) {
+			if (bestRes[k] == 1) {
+				count += 1;
+			}
+		}
+
+		totalServicePeople += companyWithTimeWindows[i].employeeWantUseBusNum;
+		totalBusUseForDfs  += count;
+		serveiceCompanyNum += 1;
+	}
+
+	std::cout  << std::endl << std::endl;
+	std::cout  << "DFS 总共使用配车数： " << totalBusUseForDfs<<std::endl;
+	std::cout  << "服务公司总数： "  << serveiceCompanyNum << std::endl;
+	std::cout  << "总共公司个数： "  << companyWithTimeWindows.size() << std::endl;
+	std::cout  << "服务人数：     "  << totalServicePeople << std::endl;
+	std::cout  << "总服务人数：   "  << allServicePeople << std::endl;
+	/*---------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
+
+
+
+	//主要算法部分
+	/*---------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	 
 	//生成客流棋盘
 
 	int segLength  = routePool.size(); //线路数目
@@ -398,48 +480,16 @@ int main()
 	companytypeRouteDict.insert(std::pair<int, std::vector<int>>(0, middlecompanyRouteID));
 	companytypeRouteDict.insert(std::pair<int, std::vector<int>>(2, largecompanyRouteID));
 	companytypeRouteDict.insert(std::pair<int, std::vector<int>>(1, smallcompanyRouteID));
+	
 	MCT::Board  newBoard(boardTable, stationWaitFlow);
 	MCT::Agent  agent(companys);
-	MCT::BusPot pot;
-
-	//贪婪搜索
-
-
-
-
-	/*
-	for (int i = 0; i < routePool.size(); i++) {
-		std::map<int, float> percent = routePool[i].companyPercent;
-		std::map<int, float>::iterator iter = percent.begin();
-		for (iter = percent.begin(); iter != percent.end(); iter++) {
-			std::cout << iter->first << "  " << iter->second;
-		}
-		std::cout << std::endl;
-	}*/
-
-
-	for (int i = 0; i < routePool.size(); i++) {
-
-		std::vector<int> nodeIDs = routePool[i].nodeIDs;
-
-		std::cout << i << "  ";
-		for (int j = 0; j < nodeIDs.size(); j++) {
-			std::cout << nodeIDs[j] << "   " << companys[nodeIDs[j]].name << "   "<< stationWaitFlow[nodeIDs[j]]<<"   ";
-		}
-		std::cout << std::endl;
-	}
-
-	//agent.BaseGreedySearch(newBoard, pot, companytypeRouteDict, routePool, false);
-	//agent.getGamePlayValue(newBoard, pot,true);
+	MCT::BusPot pot;	
 	
 	MCT::mct mct(10000,companytypeRouteDict,routePool,newBoard);
 	mct.getinitialValue(false);
 	mct.gameSet();
-
-	/*
-	MCT::Reward reward(80, 20);
-	float value = reward(80);
-	std::cout << value << std::endl;*/
+	 
+	/*---------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 	system("pause");
     return 0;

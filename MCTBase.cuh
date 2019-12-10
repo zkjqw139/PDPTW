@@ -7,6 +7,7 @@
 #include<map>
 #include<math.h>
 #include"util.cuh"
+
 //MCT 基本数据结构
 namespace MCT {
 
@@ -322,6 +323,39 @@ namespace MCT {
 	};
 
 
+	
+
+	//车辆行车链记录
+	struct  travel{
+
+		int timeid  = 0;           //发车时刻
+		std::vector<int>  nodeIDs;//选择的线路ID
+		int passengerFlow = 0;     //选择线路的当前时刻客流
+		int addcost = 0;           //选择线路的回报
+
+		travel(int timeid, std::vector<int>  nodeIDs, int passengerFlow, int addcost) {
+			this->timeid        = timeid;
+			this->nodeIDs       = nodeIDs;
+			this->passengerFlow = passengerFlow;
+			this->addcost       = addcost;
+		}
+
+		void showTravel() {
+
+			std::cout << "发车时间：" << this->timeid<<"    ";
+			std::cout << "载客量：  " << this->passengerFlow<<"   ";
+			std::cout << "行程代价：" << this->addcost<<"   ";
+			std::cout << "途径站点：";
+			for (int i = 0; i < this->nodeIDs.size(); i++) {
+				std::cout << this->nodeIDs[i]<<"  ";
+			}
+			std::cout << std::endl;
+		}
+
+
+	};
+   
+	
 	//车的状态
 	class  bus {
 
@@ -336,6 +370,8 @@ namespace MCT {
 		int   routeFlow;            //当前线路上的客流
 		int   totalDistance = 0;    //车辆总行驶里程数目
 		int   totalWaitTime = 0;    //车辆在车库的总等待时间
+
+		std::vector<travel>  travelList; 
 
 		bus() {
 
@@ -393,6 +429,28 @@ namespace MCT {
 			return attractive;
 		};
 
+		bus & operator=(bus nBus) {
+
+			this->timeBacktoMetro    = nBus.timeBacktoMetro;
+			this->busHaveUsed        = nBus.busHaveUsed;
+			this->ifFirstOutputDepot = nBus.ifFirstOutputDepot;
+			this->costOnBus          = nBus.costOnBus;
+			this->hasRoute           = nBus.hasRoute;
+			this->RouteNum           = nBus.RouteNum;
+			this->routeFlow          = nBus.routeFlow;
+			this->totalDistance      = nBus.totalDistance;
+			this->totalWaitTime      = nBus.totalWaitTime;
+			return *this;
+		}
+
+		void showBusTravelList() {
+
+			for (int i = 0; i < this->travelList.size(); i++) {
+				this->travelList[i].showTravel();
+			}
+
+
+		}
 
 		~bus() {
 
@@ -415,8 +473,8 @@ namespace MCT {
 		int  busInPot;              //在场站的车辆数目
 
 		BusPot() {
-			int busnum   = 0;         //初始化线路上车的数目为0
-			int busInPot = 0;
+			this->busNum = 0;         //初始化线路上车的数目为0
+			this->busInPot = 0;
 		}
 
 		void showCurrBusNum() {
@@ -435,26 +493,23 @@ namespace MCT {
 			float costOnBus         =cost;                    
 			bool  hasRoute          =true;                    
 			
-			//std::cout << "costOnBus: " << costOnBus << std::endl << std::endl;
-
+			travel newTravel(timeID, route.nodeIDs, routeflow, cost);
+			
 			if (BusID == -1) {
-
-				//std::cout << "select a new bus from pot" << std::endl;
 
 				busNum = busNum + 1;
 				MCT::bus newBus(timeBacktoMetro, busHaveUsed, ifFirstOutputDepot, costOnBus, hasRoute, routeflow, dist, waitTime);
+				newBus.travelList.push_back(newTravel);
 				pot.push_back(newBus);
 			}
 			else {
 
-				//std::cout << " cost on bus: "<<pot[BusID].costOnBus << std::endl;
-
-				//std::cout << "select a old bus from pot " << std::endl;
 				pot[BusID].timeBacktoMetro  = pot[BusID].timeBacktoMetro + route.routeDuration;
 				pot[BusID].totalDistance   += dist;
 				pot[BusID].totalWaitTime   += waitTime;
 				pot[BusID].costOnBus        = pot[BusID].costOnBus + costOnBus;
 				pot[BusID].routeFlow        = routeflow;
+				pot[BusID].travelList.push_back(newTravel);
 			}
 		}
         
@@ -529,6 +584,31 @@ namespace MCT {
 			std::cout << std::endl;
 
 
+
+
+		}
+
+		BusPot & operator=(BusPot pot) {
+
+			this->busInPot = pot.busInPot;
+			this->busNum = pot.busNum;
+
+			this->pot.clear();
+
+			for (int i = 0; i < pot.pot.size(); i++) {
+				this->pot.push_back(pot.pot[i]);
+			}
+			return *this;
+		}
+
+		void showBusTravelList() {
+
+			for (int i = 0; i < this->pot.size(); i++) {
+
+				std::cout << "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" << std::endl;
+				this->pot[i].showBusTravelList();
+				std::cout << "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" << std::endl;
+			}
 
 
 		}
@@ -861,7 +941,7 @@ namespace MCT {
 			}
 
 			//叶子节点价值轨迹
-			leafvalue = totalcostonbus - restflowcost;
+			leafvalue = totalcostonbus - restflowcost*2;
 
 
 			if (verbose == true) {
@@ -1053,6 +1133,7 @@ namespace MCT {
 
 			int randomSearchTimes = 0.1 * nums;
 			int greedySearchTimes = 0.9 * nums;
+           
 
 			//贪婪搜索
 			for (int i = 0; i < greedySearchTimes; i++) {
@@ -1060,8 +1141,9 @@ namespace MCT {
 				oneGame(24, this->bestValue, 1);
 			}
 
-
-
+			bestBoard.showBoard();
+			std::cout <<"配车数目"<< BestPot.busNum << std::endl;
+			BestPot.showBusTravelList();
 		}
 
 		//一局游戏
@@ -1072,8 +1154,9 @@ namespace MCT {
 			//assert(board.getBoardTable().rows() <= terminalTimeID);
 
 			int timeid = 0;
-			Board newBoard = this->board;
+			Board newBoard  = this->board;
 			BusPot newPot;
+
 			mctTreeNode * node = this->root;
 
 			//开始游戏
@@ -1162,12 +1245,18 @@ namespace MCT {
 			float reward = 0;
 			//如果叶子节点的值比当前最佳值好
 			if (leafvalue > bestValue) {
+				reward    = (leafvalue - bestValue) / 10 + 10;
 				bestValue = leafvalue;
-				reward = 1;
+				bestBoard = newBoard;
+				BestPot   = newPot;				
+			}
+			else if (leafvalue > 1.2*bestValue) {
+				reward = (leafvalue - bestValue) /10;
+
 			}
 			//如果叶子节点的值比当前最佳值差
-			else if (leafvalue <= bestValue) {
-				reward = -1;
+			else{
+				reward = (leafvalue - bestValue) / 10;
 			}
 			//更新
 			node->update_recursive(reward);
@@ -1186,10 +1275,12 @@ namespace MCT {
 		Board  board;
 		std::vector<PDPTW::Route> routePool;
 		std::map<int, std::vector<int>> companytypeRouteDict;
-		float bestValue = 0;
-
+		float  bestValue = 0;
+		Board  bestBoard = this->board;
+		BusPot BestPot;
 	};
 	
+
 
 
 }
